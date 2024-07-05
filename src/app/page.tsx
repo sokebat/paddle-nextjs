@@ -1,7 +1,5 @@
-'use client'
+"use client";
 import Pricing from "@/components/pricing";
-import YourComponent from "@/components/test";
-import React from "react";
 
 const HomePage = () => {
   return (
@@ -10,7 +8,6 @@ const HomePage = () => {
         Welcome to Our Service
       </h1>
       <Pricing />
-      {/* <YourComponent /> */}
     </div>
   );
 };

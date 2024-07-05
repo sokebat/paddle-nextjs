@@ -1,9 +1,11 @@
+import addData from "@/firebase/utils/add-data";
 import { validateSignature } from "@/utils/validate";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
     const signature = req.headers.get("Paddle-Signature");
+    console.log(signature);
     if (!signature) {
       return NextResponse.json(
         { message: "Missing Paddle-Signature header!" },
@@ -12,12 +14,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.text();
-    console.log("Received body:", body);
+
+    const PADDLE_WEBHOOK_SECRET =
+      process.env.NEXT_PUBLIC_PADDLE_WEBHOOK_SECRET!;
+
+    if (!PADDLE_WEBHOOK_SECRET) {
+      throw new Error("PADDLE_WEBHOOK_SECRET is not set");
+    }
 
     const isValid = await validateSignature(
       signature,
       body,
-      process.env.PADDLE_WEBHOOK_SECRET!
+      PADDLE_WEBHOOK_SECRET
     );
 
     if (!isValid) {
@@ -28,26 +36,128 @@ export async function POST(req: NextRequest) {
     }
 
     const parsedBody = JSON.parse(body);
+    const { data, event_type } = parsedBody;
 
-    switch (parsedBody.event_type) {
+    switch (event_type) {
       case "subscription.created":
-        // handle subscription created event
-        console.log("Subscription created:", parsedBody);
+        const subscriptionCreatedData = {
+          subscription_id: data.id,
+          product_info: data.items,
+          status: data.status,
+          updated_at: data.updated_at,
+        };
+        try {
+          const { result, error } = await addData({
+            collectionName: "Subscription Created ",
+            // id: data.user_id,
+            id: "user6",
+            data: subscriptionCreatedData,
+          });
+
+          if (error) {
+            console.error("Firebase error:", error);
+          } else {
+            console.log("Data added successfully:", result);
+          }
+        } catch (e) {
+          console.error("Error adding data:", e);
+        }
         break;
-      case "subscription.updated":
-        // handle subscription updated event
-        console.log("Subscription updated:", parsedBody);
-        break;
-      case "subscription.cancelled":
-        // handle subscription cancelled event
-        console.log("Subscription cancelled:", parsedBody);
-        break;
+
       case "transaction.completed":
-        // handle transaction succeeded event
-        console.log("Transaction completed:", parsedBody);
+        const transactionCompletedData = {
+          transaction_id: data.id,
+          subscription_id: data.subscription_id,
+          product_info: data.items,
+          // user_data: data.custom_data || '',
+          status: data.status,
+          payments: data.Payments,
+          billing_period: data.billing_period,
+          updated_at: data.updated_at,
+        };
+
+        try {
+          const { result, error } = await addData({
+            collectionName: "Transaction Completed",
+            id: "user6",
+
+            data: transactionCompletedData,
+          });
+
+          if (error) {
+            console.error("Firebase error:", error);
+          } else {
+            console.log("Data added successfully:", result);
+          }
+        } catch (e) {
+          console.error("Error adding data:", e);
+        }
         break;
+      case "transaction.cancel":
+        console.log(data);
+        const transactionCancelData = {
+          transaction_id: data.id,
+          subscription_id: data.subscription_id,
+          product_info: data.items,
+          // user_data: data.custom_data || '',
+          status: data.status,
+          payments: data.Payments,
+          billing_period: data.billing_period,
+          updated_at: data.updated_at,
+        };
+
+        try {
+          const { result, error } = await addData({
+            collectionName: "Transaction Cancel",
+            id: "user6",
+
+            data: transactionCancelData,
+          });
+
+          if (error) {
+            console.error("Firebase error:", error);
+          } else {
+            console.log("Data added successfully:", result);
+          }
+        } catch (e) {
+          console.error("Error adding data:", e);
+        }
+        break;
+
+      case "transaction.updated":
+        console.log("transactionupdates", data);
+        const transactionUpdatedData = {
+          transaction_id: data.id,
+          subscription_id: data.subscription_id || "",
+          product_info: data.items,
+          // user_data: data.custom_data || '',
+          status: data.status,
+
+          payments: data.Payments,
+          billing_period: data.billing_period,
+          updated_at: data.updated_at,
+        };
+
+        try {
+          const { result, error } = await addData({
+            collectionName: "Transaction Updated",
+            id: "user6",
+
+            data: transactionUpdatedData,
+          });
+
+          if (error) {
+            console.error("Firebase error:", error);
+          } else {
+            console.log("Data added successfully:", result);
+          }
+        } catch (e) {
+          console.error("Error adding data:", e);
+        }
+        break;
+
       default:
-        console.log("Unhandled event type:", parsedBody.event_type);
+        console.warn("Unhandled event type:", event_type);
         break;
     }
 
